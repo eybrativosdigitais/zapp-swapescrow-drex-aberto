@@ -144,6 +144,14 @@ A primeira etapa será a configuração inicial do sistema. Há 3 formas diferen
 --rpc-ws-host=0.0.0.0 \
 ```
 
+### Como funciona a criptografia no Starlight SwapEscrow?
+
+Cada instancia do Starlight SwapEscrow usa a conta Ethereum configurada no arquivo `.env` e para cada conta, quando a instancia é carregada a primeira vez, é criada um par de chaves criptograficas que usam a curva eliptica [BabyJubJub](https://docs.iden3.io/publications/pdfs/Baby-Jubjub.pdf). Essa chave fica registrada no arquivo **orchestration/common/db/key.json**. A chave pública deste par e o endereço Ethereum da instancia Startlight SwapEscrow são registrados no mapa `zkpPublicKeys` no Smart Contract SwapShield do projeto Starlight SwapEscrow.
+
+Os dados da contraparte são criprografados pelo remetente da proposta usando a chave pública da contraparte que esta registrada no Smart Contract SwapShield. E somente a contraparte, usando a chave privada que só ele tem, pode descriptografar os dados. Assim sendo, a contraparte (receiver) só consegue incorporar o commitment de proposta de troca (swapProposals) se o proponente (sender) encriptar os dados com a chave pública do recebedor da proposta (receiver). Ou quando da conclusão da troca, a contraparte (receiver) encripta os dados da aceitação usando a chave pública do proponente (sender) permitindo assim o proponente incorporar o commitment em seu banco de dados. 
+
+Para efeitos de backup, os commitments (dados de cada transação) são também são criptografados com a chave privada do remetente. Assim, se for necessário restaurar um backup, o Starlight SwapEscrow poderá acessar novamente os eventos das transações, descriptografar e trazer os dados das transações para o banco de dados da instancia.
+
 ## 2 - Permissões dos contratos
 
 Foi realizado o deploy do contrato inteligente denominado **SwapShield** responsável por gerenciar os *commitments* do Starlight para os testes de transferência, assegurando que os saldos permaneçam criptografados na rede. Para participar dos testes, os envolvidos no projeto piloto deverão realizar um depósito de Real tokenizado (ERC20) e de TPFt (ERC1155) neste contrato.
