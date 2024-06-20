@@ -1,0 +1,72 @@
+services:
+  zapp:
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    image: ghcr.io/eybrativosdigitais/zapp-swapescrow-drex:latest
+    depends_on:
+      - zokrates
+      - timber
+    healthcheck:
+      test: curl -f http://localhost:3000/healthcheck || exit 1
+      interval: 2s
+      timeout: 1s
+      retries: 120
+      start_period: 1s
+      start_interval: 2s
+    volumes:
+      - ./build:/app/build
+      - ./orchestration/common/db/:/app/orchestration/common/db/
+    environment:
+      RPC_URL: ${SWAPESCROW_RPC_URL}
+      DEFAULT_ACCOUNT: ${DEFAULT_ACCOUNT}
+      KEY: ${KEY}
+      LOG_LEVEL: info
+      MONGO_URL: ${MONGO_URL}
+      MONGO_NAME: zapp_db
+      TIMBER_URL: http://timber
+    networks:
+      - zapp_network
+
+  zokrates:
+    image: ghcr.io/eyblockchain/zokrates-worker-updated:latest
+    # platform: linux/arm64/v8
+    volumes:
+      - ./circuits/:/app/circuits
+      - ./proving-files/:/app/output
+      - ./orchestration/common/db/:/app/orchestration/common/db
+    environment:
+      PROVING_SCHEME: "g16"
+    ports:
+      - "8080:80"
+    networks:
+      - zapp_network
+
+  timber:
+    env_file:
+      - .env
+    image: ghcr.io/eybrativosdigitais/starlight-timber:latest
+    restart: on-failure
+    volumes:
+      - ./config/:/app/config
+      - ./build/:/app/build
+    ports:
+      - "3100:80"
+    environment:
+      HASH_TYPE: "mimc"
+      LOG_LEVEL: "debug"
+      UNIQUE_LEAVES: "true"
+      DEFAULT_GAS: ${DEFAULT_GAS}
+      DEFAULT_GAS_PRICE: ${DEFAULT_GAS_PRICE}
+      RPC_URL: ${SWAPESCROW_RPC_URL}
+      DEFAULT_ACCOUNT: ${DEFAULT_ACCOUNT}
+      KEY: ${KEY}
+      CONTRACT_LOCATION: "default"
+      DB_URL: ${MONGO_URL}
+    networks:
+      - zapp_network
+
+networks:
+  zapp_network:
+    name: zapp_network
